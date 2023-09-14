@@ -134,7 +134,7 @@ For this condensed example to be accepted, the data format needs to have been pr
 ```
 
 
-To this request, the server returned a code **200** with the data **{“id”: 12}** allowing us to use the data format with this ID in future requests. **WARNING: Variable keys should NOT be integers even when represented as strings to avoid clashing with potential indexes of defined data format. **
+To this request, the server returned a code **200** with the data **{“id”: 12}** allowing us to use the data format with this ID in future requests. **WARNING: Variable keys should NOT be integers even when represented as strings to avoid clashing with potential indexes of defined data format.**
 
 
 ## Data Structures
@@ -142,9 +142,7 @@ To this request, the server returned a code **200** with the data **{“id”: 1
 
 ### Main Object
 
-**Description: **This is the main object when sending Device Data, it contains information about the device current state and historical data. It can also optionally contain information about the data format, such as detailed descriptions of the variables. 
-
-{
+**Description:** This is the main object when sending Device Data, it contains information about the device current state and historical data. It can also optionally contain information about the data format, such as detailed descriptions of the variables. 
 
 
 <table>
@@ -223,8 +221,6 @@ Description: This allows you to next into one object Main Objects for the access
 </table>
 
 
-}
-
 **Notes:** 
 
 
@@ -232,7 +228,7 @@ Description: This allows you to next into one object Main Objects for the access
 * **At least one of “data” or “historical_data” must be provided for the request to be valid. 
 * To be able to use device data arrays in the historical_data or data objects, either a “data_format” or a “data_format_id” field must be provided corresponding to a data format that defines variable orders. They cannot be both provided together. 
 
-**Example (see other examples above): **
+**Example (see other examples above):**
 
 
 ```
@@ -253,10 +249,9 @@ Description: This allows you to next into one object Main Objects for the access
 
 ### Device Data Object
 
-**Description: **The device data object is an object containing any number of variables and representing a given state of the device. Those variables can be defined with further details in the data format object (in the “variable” sub-object). Some variables are standard variables, in particular the “timestamp” variable (representing the Unix timestamp at which the data was taken) or the “relative_time” variable (representing a time elapsed in seconds from the time in the reference timestamp provided in the main object, or the time of the request). 
+**Description:** The device data object is an object containing any number of variables and representing a given state of the device. Those variables can be defined with further details in the data format object (in the “variable” sub-object). Some variables are standard variables, in particular the “timestamp” variable (representing the Unix timestamp at which the data was taken) or the “relative_time” variable (representing a time elapsed in seconds from the time in the reference timestamp provided in the main object, or the time of the request). 
 
-**Example: **
-
+**Example:**
 
 ```
 {
@@ -271,8 +266,7 @@ Description: This allows you to next into one object Main Objects for the access
 
 If the Device Data Format defines an object order, then the object order can be used as the key for each of the variable to save data: 
 
-**Example: **
-
+**Example:**
 
 ```
 {
@@ -288,20 +282,18 @@ If the Device Data Format defines an object order, then the object order can be 
 
 ### Device Data Array
 
-**Description: **The device data array is an array containing any number of variables and representing a given state of the device. The order of those variables MUST be defined in the data format object (in the “data_order” or “historical_data_order” objects). 
+**Description:** The device data array is an array containing any number of variables and representing a given state of the device. The order of those variables MUST be defined in the data format object (in the “data_order” or “historical_data_order” objects). 
 
-**Example: **
-
+**Example:**
 
 ```
 [17.5,12.5,2.2,3.2,0,0,0,1611583070]
 ```
 
 
-There is no minimum number of variables to be included and variables that are not useful can be omitted as long as they are after the last variable that is needed in the order. Here we omit the usb_load_current 1 and 2 as well as the timestamp that is not needed since the interval has been defined at 60 seconds already). 
+There is no minimum number of variables to be included and variables that are not useful can be omitted as long as they are after the last variable that is needed in the order. Here we omit the usb_load_current 1 and 2 as well as the timestamp that is not needed since the interval has been defined at 60 seconds already. 
 
-**Example: **
-
+**Example:**
 
 ```
 [17.5,12.5,2.2,3.2]
@@ -313,9 +305,7 @@ If you want to submit just a few variables that are higher in the order than var
 
 ### Data Format Object
 
-**Description: **This is the object used to define the data format of the main object. It can either be included in the main object in the “data_format” sub-object, or can be registered separately and then referenced using the “data_format_id” obtained after registering it (see below the route for registering). 
-
-{
+**Description:** This is the object used to define the data format of the main object. It can either be included in the main object in the “data_format” sub-object, or can be registered separately and then referenced using the “data_format_id” obtained after registering it (see below the route for registering). 
 
 
 <table>
@@ -360,10 +350,7 @@ Description: This is the object giving additional details about each of the vari
 </table>
 
 
-}
-
 **Example:**
-
 
 ```
 {
@@ -398,21 +385,20 @@ Description: This is the object giving additional details about each of the vari
 ```
 
 
-
 ## Routes
 
 
 ### Send Device Data
 
-**Method**: POST
+**Method:** POST
 
-**Route**: /device_data or /dd
+**Route:** /device_data or /dd
 
-**Description**: You can use this route to send a collection of device data to a server. 
+**Description:** You can use this route to send a collection of device data to a server. 
 
-**Expected Content: **A Main Object matching the Main Object Data Structure. 
+**Expected Content:** A Main Object matching the Main Object Data Structure. 
 
-**Expected Response: **A 201 code with either:
+**Expected Response:** A 201 code with either:
 
 1. Default: An empty object
 
@@ -437,43 +423,37 @@ Note that for devices that use “time” and not “credit”, which is most of
 
 ### Get Device Data (Optional)
 
-**Method**: GET
+**Method:** GET
 
-**Route**: /device_data or /dd
+**Route:** /device_data or /dd
 
-**Request Parameters: **
+**Request Parameters:**
 
+* **from_datetime:** Datetime in ISO 8601 format for the beginning of the time for which you want the historical data.
+* **to_datetime:** Datetime in ISO 8601 format for the beginning of the time for which you want the historical data.
 
-
-* **from_datetime**: Datetime in ISO 8601 format for the beginning of the time for which you want the historical data.
-* **to_datetime**: Datetime in ISO 8601 format for the beginning of the time for which you want the historical data.
-
-**Description**: You can use this route to get a collection of device data from a server. 
+**Description:** You can use this route to get a collection of device data from a server. 
 
 **Expected Content: **A Main Object matching the Main Object Data Structure. A server will always return it in the Simple format. 
 
 
 ### Register Device Data Format
 
-**Method**: POST
+**Method:** POST
 
-**Route**: /data_format
+**Route:** /data_format
 
-**Description**: You can use this route to send a collection of device data to a server. 
+**Description:** You can use this route to send a collection of device data to a server. 
 
-**Expected Content: **A Data Format Object matching the Data Format Data Structure. 
+**Expected Content:** A Data Format Object matching the Data Format Data Structure. 
 
-**Expected Response: **A 201 code with an ID of the registered data format object. 
+**Expected Response:** A 201 code with an ID of the registered data format object. 
 
-
-```
-{"id": 123}
-```
+```{"id": 123}```
 
 
 
 ## Server communication
-
 
 ### Base URL
 
@@ -481,7 +461,6 @@ The base url for the API of a platform is provided by the owner of the server an
 
 
 ### Security
-
 
 
 1. HTTPS with TLS, transport layer security
@@ -494,7 +473,7 @@ The connection to the platform must be secured by HTTPS using TLS v1.1 or TLS v1
 
 The HTTP request header must include a valid JWT key provided in the “Authorization” header and preceded by the keywork “JWT” and a space. The JWT key can be obtained from the owner of the server and will be valid only for that server. For example: 
 
-**<code>Authorization: </code></strong>JWT xxxxxxx.yyyyyyyyy.zzzzzzz
+```Authorization: JWT xxxxxxx.yyyyyyyyy.zzzzzzz```
 
 
 ### Encoding rules (JSON or CBOR)
