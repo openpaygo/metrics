@@ -11,23 +11,26 @@
     - [Condensed Example](#condensed-example)
   - [Requests and Responses](#requests-and-responses)
     - [Payload content philosophy](#payload-content-philosophy)
+    - [Asynchronous Flow](#asynchronous-flow)
   - [Security](#security)
     - [Device Request](#device-request)
     - [Server Response](#server-response)
   - [Data Structures](#data-structures)
-    - [Main Object](#main-object)
+    - [Device Request Object](#device-request-object)
     - [Device Data Object](#device-data-object)
     - [Device Data Array](#device-data-array)
     - [Data Format Object](#data-format-object)
-  - [Routes](#routes)
+    - [Server Response Object](#server-response-object)
+  - [API Routes](#api-routes)
     - [Send Device Data](#send-device-data)
-    - [Get Device Data (Optional)](#get-device-data-optional)
+    - [Get Device Data](#get-device-data)
     - [Register Device Data Format](#register-device-data-format)
   - [Server communication](#server-communication)
     - [Base URL](#base-url)
     - [Security](#security-1)
     - [Encoding rules (JSON or CBOR)](#encoding-rules-json-or-cbor)
     - [Data to be stored for each server](#data-to-be-stored-for-each-server)
+    - [Change of server parameters](#change-of-server-parameters)
 
 
 ## Purpose
@@ -171,6 +174,16 @@ To this request, the server returned a code **200** with the data **{“id”: 1
 
 The OpenPAYGO Metrics payload is meant to contain all of the information necessary for the processing of the request, including the serial number of the device and any authentication or other metadata necessary for the processing of the request. This is unlike RESTful standards for API but is done on purpose to allow for the payload to be passed through intermediary seemlessly. In particular this allows for the data to be collected offline using mechanisms such as OpenPAYGO Pass (storing data into an RFID tag) or OpenPAYGO Bridge (transferring data to a smartphone) and then submitted to a server while online without needing to store any information apart from the payload themselves to remove the need from any processing to be done by the intermediary. It also allows for the data of accessories (without remote connectivity) to be bundled together with the data of a primary device (that has remote connectivity) without the device needing to know anything about the data format of the accessories. 
 
+### Asynchronous Flow
+
+When the request and response is asynchronous (e.g. when the data is sent through OpenPAYGO Pass or OpenPAYGO Bridge offline), specific rules should be followed to ensure data consistency. 
+
+- The data should NOT be cleared after being sent but instead only after receiving a response. This is key, as sometimes the data might be requested several times before being sent to an actual server for response (e.g. user tapping their OpenPAYGO Pass several times or several agents collecting with OpenPAYGO Bridge), if it is cleared at sending then it will be lost. Instead, it is preferrable to only clear the data when receiving the response. 
+
+- If possible, after sending the data, the new data should both be appended to the existing, as well as to a separate secondary storage. This secondary storage should in that case be cleared if the data is requested again. When a response is received, the main storage is cleared and the secondary storage is transferred to the main storage. This allows to properly keep track of the data generated between the request and the response time while not risking losing the initial data by clearing it before receiving a response. 
+
+- If this is not possible, then it is assumed that the data taken between the request and the response will be lost, which is an acceptable tradeoff as the period of time between request and response is generally small in comparison to the overall time stored in the data and is usually a period of low activity. 
+
 
 ## Security
 
@@ -199,15 +212,17 @@ For some use cases, mainly to define data format in advance and get a data forma
 
 ### Server Response
 
-To keep the workload of the device light, the server response is not authentified if it contains only OpenPAYGO Tokens (as they are themselves secured). For other answer payloads a SipHash-2-4 of "answer data" with the device secret key is done and stored as "auth" or "a" in payload root of the answer. 
+The server MUST support all of the security modes possible for device requests. Devices might use different security mode based on their limitations and use cases, but servers should always be able to verify the auth provided by the device as server do not have such limitations. 
+
+To keep the workload of the device light, the server response does not need to be  authentified if it contains only OpenPAYGO Tokens (as they are themselves secured). For other answer payloads a SipHash-2-4 of the "answer data" with the device secret key is done and stored as "auth" or "a" in payload root of the answer. 
 
 
 ## Data Structures
 
 
-### Main Object
+### Device Request Object
 
-**Description:** This is the main object when sending Device Data, it contains information about the device current state and historical data. It can also optionally contain information about the data format, such as detailed descriptions of the variables. 
+**Description:** This is the main object when sending Device Data, it contains information about the device current state and historical data. It can also optionally contain information about the data format, such as detailed descriptions of the variables. The maximum size of a Device Request object should be 4096 KB, if there is more content to be sent, it can be split in several objects. 
 
 
 <table>
@@ -246,6 +261,33 @@ To keep the workload of the device light, the server response is not authentifie
     </td>
   </tr>
   <tr>
+    <td>request_count</td>
+    <td>
+        <strong>Short Version:</strong> rc<br>
+        <strong>Type:</strong> number<br>
+        <strong>Example:</strong> 132<br>
+        <strong>Description:</strong> This is compulsory for devices without time keeping and allows to keep track of which data has been received already. If provided only requests with equal or higher count should be treated. It should be incremented ON REQUEST and not on response (for asynchronous flow). <br>
+    </td>
+  </tr>
+  <tr>
+    <td>data_collection_timestamp</td>
+    <td>
+        <strong>Short Version:</strong> dct<br>
+        <strong>Type:</strong> number<br>
+        <strong>Example:</strong> 1611583010<br>
+        <strong>Description:</strong> This is useful for asynchronous flow. This is the timestamp at which the data was collected from the device. This is optionally added by the intermediary (if any) in case the device itself does not have a timestamp to account for the difference between the collection of the data and when it reaches the server. <br>
+    </td>
+  </tr>
+  <tr>
+    <td>auth</td>
+    <td>
+        <strong>Short Version:</strong> a<br>
+        <strong>Type:</strong> string (hex)<br>
+        <strong>Example:</strong> dacfb8962cc76a95c4<br>
+        <strong>Description:</strong> This  is the authentication token generated following the guidelines in the [Security](#security) section. <br>
+    </td>
+  </tr>
+  <tr>
     <td>data_format</td>
     <td>
         <strong>Short Version:</strong> dfo<br>
@@ -265,8 +307,8 @@ To keep the workload of the device light, the server response is not authentifie
     <td>accessories</td>
     <td>
         <strong>Short Version:</strong> acc<br>
-        <strong>Type:</strong> array (of main objects)<br>
-        <strong>Description:</strong> This allows you to next into one object Main Objects for the accessories connected to that device (e.g. a TV, a Fridge, etc.) that each have their own serial numbers and data format. <br>
+        <strong>Type:</strong> array (of device request objects)<br>
+        <strong>Description:</strong> This allows you to next into one object Device Request Objects for the accessories connected to that device (e.g. a TV, a Fridge, etc.) that each have their own serial numbers and data format. <br>
     </td>
   </tr>
 </table>
@@ -300,7 +342,7 @@ To keep the workload of the device light, the server response is not authentifie
 
 ### Device Data Object
 
-**Description:** The device data object is an object containing any number of variables and representing a given state of the device. Those variables can be defined with further details in the data format object (in the “variable” sub-object). Some variables are standard variables, in particular the “timestamp” variable (representing the Unix timestamp at which the data was taken) or the “relative_time” variable (representing a time elapsed in seconds from the time in the reference timestamp provided in the main object, or the time of the request). 
+**Description:** The device data object is an object containing any number of variables and representing a given state of the device. Those variables can be defined with further details in the data format object (in the “variable” sub-object). Some variables are standard variables, in particular the “timestamp” variable (representing the Unix timestamp at which the data was taken) or the “relative_time” variable (representing a time elapsed in seconds from the time in the reference timestamp provided in the device request object, or the time of the request). 
 
 **Example:**
 
@@ -356,46 +398,41 @@ If you want to submit just a few variables that are higher in the order than var
 
 ### Data Format Object
 
-**Description:** This is the object used to define the data format of the main object. It can either be included in the main object in the “data_format” sub-object, or can be registered separately and then referenced using the “data_format_id” obtained after registering it (see below the route for registering). 
+**Description:** This is the object used to define the data format of the device request object. It can either be included in the device request object in the “data_format” sub-object, or can be registered separately and then referenced using the “data_format_id” obtained after registering it (see below the route for registering). 
 
 
 <table>
-    <tr>
-        <td>data_order</td>
-        <td>
-            <strong>Type:</strong> object<br>
-            <strong>Example:</strong> {“1”:”token_count”, “2”:”firmware_version”}<br>
-            <strong>Description:</strong> This object describes the order of the “data” attribute of the main object if such data is provided as a Device Data Array. 
-        </td>
-    </tr>
-        <tr>
-        <td>historical_data_order
-    </td>
-    <td>object
-<p>
-example: {“1”:”panel_voltage”, “2”:”battery_voltage”}
-<p>
-Description: This object describes the order of the “historical_data” attribute of the main object if such data is provided as a Device Data Array. 
-   </td>
-  </tr>
-  <tr>
-   <td>historical_data_interval
-   </td>
-   <td>integer (seconds)
-<p>
-example: 300
-<p>
-Description: This defines the default interval in seconds between historical data objects. When using this, it is not needed to specify the “timestamp” or “relative_time” of each of the Device Data Object or Device Data Array in the “historical_data” array. Instead, if the value is not there, it is assumed to be that many seconds after the last item of the array. It can be negative if the objects the highest in the list are the most recent. 
-   </td>
-  </tr>
-  <tr>
-   <td>variables
-   </td>
-   <td>object
-<p>
-Description: This is the object giving additional details about each of the variables. While this is not mandatory, it is recommended as it provides additional information for the software platform to properly describe and display data coming from the device to their users. The keys of the object are the name of the variables and for each key, there is a sub-object representing the variable. Only the “<strong>name</strong>” is required but you can also include a “<strong>type</strong>” (integer, float, text, bool), a “<strong>unit</strong>” and a “<strong>description</strong>”. If not provided, the type is assumed to be “text”. A <strong>scale factor</strong> can also be used as a multiplier for the given value. 
-   </td>
-  </tr>
+   <tr>
+      <td>data_order</td>
+      <td>
+         <strong>Type:</strong> object<br>
+         <strong>Example:</strong> {“1”:”token_count”, “2”:”firmware_version”}<br>
+         <strong>Description:</strong> This object describes the order of the “data” attribute of the device request object if such data is provided as a Device Data Array. 
+      </td>
+   </tr>
+   <tr>
+      <td>historical_data_order</td>
+      <td>
+         <strong>Type:</strong> object<br>
+         <strong>Example:</strong> {“1”:”panel_voltage”, “2”:”battery_voltage”}<br>
+         <strong>Description:</strong> This object describes the order of the “historical_data” attribute of the device request object if such data is provided as a Device Data Array. 
+      </td>
+   </tr>
+   <tr>
+      <td>historical_data_interval</td>
+      <td>
+         <strong>Type:</strong> integer (seconds)<br>
+         <strong>Example:</strong> 300<br>
+         <strong>Description:</strong> This defines the default interval in seconds between historical data objects. When using this, it is not needed to specify the “timestamp” or “relative_time” of each of the Device Data Object or Device Data Array in the “historical_data” array. Instead, if the value is not there, it is assumed to be that many seconds after the last item of the array. It can be negative if the objects the highest in the list are the most recent. 
+      </td>
+   </tr>
+   <tr>
+      <td>variables</td>
+      <td>
+         <strong>Type:</strong> object<br>
+         <strong>Description:</strong> This is the object giving additional details about each of the variables. While this is not mandatory, it is recommended as it provides additional information for the software platform to properly describe and display data coming from the device to their users. The keys of the object are the name of the variables and for each key, there is a sub-object representing the variable. Only the “<strong>name</strong>” is required but you can also include a “<strong>type</strong>” (integer, float, text, bool), a “<strong>unit</strong>” and a “<strong>description</strong>”. If not provided, the type is assumed to be “text”. A <strong>scale factor</strong> can also be used as a multiplier for the given value.
+      </td>
+   </tr>
 </table>
 
 
@@ -433,8 +470,88 @@ Description: This is the object giving additional details about each of the vari
 }
 ```
 
+### Server Response Object
 
-## Routes
+<table>
+   <tr>
+      <td>serial_number*</td>
+      <td>
+         <strong>Short:</strong> sn<br>
+         <strong>Type:</strong> string<br>
+         <strong>Example:</strong> OP123456789<br>
+         <strong>Description:</strong> The serial number of the device that the response should go to. This is useful in case of asynchronous response where responses could get mixed up (e.g. OpenPAYGO Pass), for the device to check if the responses is for itself. 
+      </td>
+   </tr>
+   <tr>
+      <td>token_list</td>
+      <td>
+         <strong>Short:</strong> tkl<br>
+         <strong>Type:</strong> array (of OpenPAYGO Tokens)<br>
+         <strong>Example:</strong> 32<br>
+         <strong>Description:</strong> This should be included in the answer if “token_count” (or “tc”) is provided in the data. It contains an array of OpenPAYGO Token to be used by the device from oldest to most recent. Note that those tokens are provided in order of increasing token count. Note that for devices that use “time” mode, which is most of the devices (by opposition to “credit” mode which is less common): there is usually only one “SET_TIME” token corresponding to the difference between now and the target expiration time of the device. 
+      </td>
+   </tr>
+   <tr>
+      <td>active_until_timestamp</td>
+      <td>
+         <strong>Short:</strong> auts<br>
+         <strong>Type:</strong> number (integer)<br>
+         <strong>Example:</strong> 1695394897<br>
+         <strong>Description:</strong> This should be included in the answer if “active_until_timestamp_requested” is provided in the data and set to “true” (or 1). This is the time at which the PAYGO credit of the device will run out as a UNIX timestamp. If this is provided and the device as a secret key, the auth MUST be provided. This is an alternative activation method for devices that do not have the manual token entry and have timestamp keeping. 
+      </td>
+   </tr>
+   <tr>
+      <td>active_seconds_left</td>
+      <td>
+         <strong>Short:</strong> asl<br>
+         <strong>Type:</strong> number (integer)<br>
+         <strong>Example:</strong> 3600<br>
+         <strong>Description:</strong> This should be included in the answer if “active_seconds_left_requested" is provided in the data and set to “true” (or 1). It is the time number of seconds left until the PAYGO credit runs out. If this is provided and the device as a secret key, the auth MUST be provided. This is an alternative activation method for devices that do not have the manual token entry and do not have timestamp keeping. 
+   </tr>
+   <tr>
+      <td>settings</td>
+      <td>
+         <strong>Short:</strong> st<br>
+         <strong>Type:</strong> object<br>
+         <strong>Example:</strong> {"base_url": "newcloud.paygops.com/metrics", "power_mode": "high"}<br>
+         <strong>Description:</strong> It is an object with updated settings from the device. This can be used to update the server URL or any other device settings. If this is provided and the device has a secret key, the server MUST use the data auth to authentify the response and include the original request "timestamp" or "request_count" if it was provided by the device. 
+   </tr>
+   <tr>
+      <td>extra_data</td>
+      <td>
+         <strong>Short:</strong> ed<br>
+         <strong>Type:</strong> object<br>
+         <strong>Example:</strong> {"sun_prevision_wsqm": "990"}<br>
+         <strong>Description:</strong> Can be used to send extra data from server to device. This is for customisation and the specific content would be device specific. 
+   </tr>
+</table>
+
+
+**Note:** The server should try to answer in the same form (condensed or simple) as the request. However, a condensed answer should always be accepted by the device even if the request was simple. 
+
+
+**Examples:**
+
+With tokens:
+```{"tkl": [111222333, 333444555, 555666777]}```
+
+With timestamps:
+```{"auts": 1616081621, "a": "da6a1c9f272977534f"}```
+
+With seconds left: 
+```{"asl": 3600, "a": "da41bd40618a3bd1ee"}```
+
+With settings:
+```{"a": "da7d7565266f089007", "st": {"base_url": "newcloud.paygops.com/metrics", "power_mode": "high"}, "tkl": [333444555]}``` 
+
+With extra data:
+```{"a": "dacfb8962cc76a95c4", "ed": {"sun_prevision_wsqm": "990"}, "tkl": [111222333]}```
+
+
+
+
+
+## API Routes
 
 
 ### Send Device Data
@@ -445,53 +562,17 @@ Description: This is the object giving additional details about each of the vari
 
 **Description:** You can use this route to send a collection of device data to a server. 
 
-**Expected Content:** A Main Object matching the Main Object Data Structure. 
+**Expected Content:** A Device Request Object matching the Device Object Data Structure. 
 
 **Expected Response:** A 201 code with either:
 
 1. Default: An empty object
 
-2. An object with data (if there is data to be sent): 
+2. A a Server Response object
    
-- (Required) “serial_number“ (or “sn“ for short)
-
-- (Optional) If “token_count” (or “tc”) is provided in the data: An object containing a “token_list” (or “tkl”) key with an array of OpenPAYGO Token to be used by the device from oldest to most recent. Note that those tokens are provided in order of increasing token count. Note that for devices that use “time” mode, which is most of the devices (by opposition to “credit” mode which is less common): there is usually only one “SET_TIME” token corresponding to the difference between now and the target expiration time of the device. 
 
 
-```
-{"tkl": [111222333, 333444555, 555666777]}
-```
-
-- (Optional) If “active_until_timestamp_requested” is provided in the data and set to “true” (or 1): An object containing the “active_until_timestamp” (“auts”) which is the time at which the PAYGO credit of the device will run out as a UNIX timestamp. If this is provided and the device as a secret key, the auth MUST be provided. This is an alternative activation method for devices that do not have the manual token entry and have timestamp keeping. 
-
-```
-{"auts": 1616081621, "a": "da6a1c9f272977534f"}
-```
-
-- (Optional) If “active_seconds_left_requested" is provided in the data and set to “true” (or 1): An object containing the “active_seconds_left (“asl”) which is the time number of seconds left until the PAYGO credit runs out. If this is provided and the device as a secret key, the auth MUST be provided. This is an alternative activation method for devices that do not have the manual token entry and do not have timestamp keeping. 
-
-```
-{"asl": 3600, "a": "da41bd40618a3bd1ee"}
-```
-
-- (Optional) A “settings“ key is provided in the data and contains an object with updated settings from the device. This can be used to update the server URL or any other device settings. If this is provided and the device has a secret key, the server MUST use the data auth to authentify the response and include the original request "timestamp" or "request_count" if it was provided by the device.
-
-```
-{"a": "da7d7565266f089007", "settings": {"base_url": "newcloud.paygops.com/metrics", "power_mode": "high"}, "tkl": [333444555]}
-```
-
-- (Optional) A "extra_data" key that can be used to send extra data from server to device. 
-
-```
-{"a": "dacfb8962cc76a95c4", "extra_data": {"sun_prevision_wsqm": "990"}, "tkl": [111222333]}
-```
-
-
-
-
-
-
-### Get Device Data (Optional)
+### Get Device Data
 
 **Method:** GET
 
@@ -502,9 +583,9 @@ Description: This is the object giving additional details about each of the vari
 * **from_datetime:** Datetime in ISO 8601 format for the beginning of the time for which you want the historical data.
 * **to_datetime:** Datetime in ISO 8601 format for the beginning of the time for which you want the historical data.
 
-**Description:** You can use this route to get a collection of device data from a server. 
+**Description:** You can use this route to get a collection of device data from a server. This route is very useful for debugging when testing devices. 
 
-**Expected Content: **A Main Object matching the Main Object Data Structure. A server will always return it in the Simple format. 
+**Expected Content:** A Device Request Object matching the Device Request Object Data Structure. A server will always return it in the Simple format. 
 
 
 ### Register Device Data Format
@@ -544,7 +625,7 @@ The connection to the platform must be secured by HTTPS using TLS v1.1 or TLS v1
 
 All content exchanged with the API needs to be in JSON format as defined by RFC-8259. Date and datetimes needs exchanged must be in the format specified by ISO 8601 (compatible with RFC3339). The “content-type” header should be set to “application/json” or simply “json”. 
 
-Alternatively, the content exchanged may be encoded using CBOR to reduce data usage, in which case the header “content-type” should be set to “application/cbor” or simply “cbor”. This should only be done if there are no intermediaries and the communication is done directly with the server. 
+Alternatively, the content exchanged may be encoded using CBOR to reduce data usage, in which case the header “content-type” should be set to “application/cbor” or simply “cbor”. This can only be done if there are no intermediaries and the communication is done directly with the server. 
 
 
 ### Data to be stored for each server

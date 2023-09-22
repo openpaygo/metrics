@@ -23,6 +23,10 @@ To get started, check out [that document](https://github.com/openpaygo/metrics/b
 
 ## Changelog
 
+### 2023-09-22 - v0.15
+- Added details about asynchronous flow
+- Documentation coherence improvements
+
 ### 2023-09-15 - v0.14
 - Added definition of the security schemes
 - Added clarifications about the request and responses flow
