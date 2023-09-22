@@ -15,6 +15,8 @@ This repository contains all the information you need to integrate OpenPAYGO Met
   </a>
 </p>
 
+This open-source project was funded and developped by [Solaris Offgrid](https://www.solarisoffgrid.com/), the developers of PaygOps™ and is free to use by all. 
+
 ---
 
 To get started, check out [that document](https://github.com/openpaygo/metrics/blob/main/API%20Specs.md).
