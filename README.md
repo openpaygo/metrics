@@ -5,7 +5,7 @@ This repository contains all the information you need to integrate OpenPAYGO Met
 <p align="center">
   <img
     alt="Project Status"
-    src="https://img.shields.io/badge/Project%20Status-beta-orange"
+    src="https://img.shields.io/badge/Project%20Status-active-blue"
   >
   <a href="https://github.com/openpaygo/metrics/blob/main/LICENSE" target="_blank">
     <img
@@ -17,13 +17,21 @@ This repository contains all the information you need to integrate OpenPAYGO Met
 
 This open-source project was funded and developped by [Solaris Offgrid](https://www.solarisoffgrid.com/), the developers of PaygOps™ and is free to use by all. 
 
----
 
-To get started, check out [that document](https://github.com/openpaygo/metrics/blob/main/API%20Specs.md).
+## Getting Started
 
-**Warning:** This specifications is still at an early stage and might evolve based on feedback over the next few months though care will be taken to keep it as retrocompatible as possible. 
+OpenPAYGO Metrics provide a standardized way for PAYGO devices to send usage metrics to a server and get back information about their activation status in a low cost and secure way. The specification is designed so that the payload is very lightweight while additional information about the data format can be provided to allow servers to display and process the data with a lot of details. It is currently in active use by multiple software providers and manufacturers. 
+
+To get started implementing, check out [that document](https://github.com/openpaygo/metrics/blob/main/Specifications.md) that describes the detailed specification of the OpenPAYGO Metrics payload and API. 
+
+A Python library for the server side and Arduino library for the device side are currently being worked on. More information will be posted here once working versions are available. If you would like to contribute or sponsor this project, or if you would like to be added to the registry of current user, open an issue in the issue tracker to let us know. 
+
 
 ## Changelog
+
+### 2023-10-02 - v1.0.0-rc0
+- Improved the "Variable Type" object structure documentation
+- Added information about the aggregation of temporal data
 
 ### 2023-09-22 - v0.15
 - Added details about asynchronous flow

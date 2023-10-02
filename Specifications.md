@@ -35,7 +35,7 @@
 
 ## Purpose
 
-The purpose of this API specification is to provide a standardized way for PAYGO devices to send usage metrics to a server and get back information about their activation status. It is particularly optimized for transmitting data over slow connections and connections that have high costs while maintaining simplicity. 
+The purpose of this specification is to provide a standardized way for PAYGO devices to send usage metrics to a server and get back information about their activation status. It is particularly optimized for transmitting data over slow connections and connections that have high costs while maintaining simplicity. 
 
 Having this specification open-source allows PAYG device manufacturers to implement the specified behaviour into their devices and let the distributor or final user choose which software to use. The specification also describes how to exchange data between servers, allowing for example that a manufacturer hosts their own server to gather device data but still allow a software provider to access it. 
 
@@ -429,8 +429,9 @@ If you want to submit just a few variables that are higher in the order than var
    <tr>
       <td>variables</td>
       <td>
-         <strong>Type:</strong> object<br>
-         <strong>Description:</strong> This is the object giving additional details about each of the variables. While this is not mandatory, it is recommended as it provides additional information for the software platform to properly describe and display data coming from the device to their users. The keys of the object are the name of the variables and for each key, there is a sub-object representing the variable. Only the “<strong>name</strong>” is required but you can also include a “<strong>type</strong>” (integer, float, text, bool), a “<strong>unit</strong>” and a “<strong>description</strong>”. If not provided, the type is assumed to be “text”. A <strong>scale factor</strong> can also be used as a multiplier for the given value.
+         <strong>Type:</strong> object (containing variable name and variable type objects pair)<br>
+         <strong>Example:</strong> {"overload_alert":{"name":"Too Many Loads"}, "battery_voltage":{"name":"Battery Voltage"}}<br>
+         <strong>Description:</strong> This object gives additional details about each of the variables. While this is not mandatory, it is recommended as it provides additional information for the software platform to properly describe and display data coming from the device to their users. The keys of the object are the name of the variables and for each key, there is a sub-object containing a Variable Type object (see full definition below). 
       </td>
    </tr>
 </table>
@@ -470,7 +471,79 @@ If you want to submit just a few variables that are higher in the order than var
 }
 ```
 
+### Variable Type Object**Description:** This is the object used to define a specific variable type and how it can be displayed and processed. 
+
+**Description:** This is the object used to define a specific variable type and how it can be displayed and processed. 
+
+<table>
+   <tr>
+      <td>name*</td>
+      <td>
+         <strong>Type:</strong> string<br>
+         <strong>Example:</strong> Battery Voltage<br>
+         <strong>Description:</strong> The human readable name of the variable
+      </td>
+   </tr>
+   <tr>
+      <td>type</td>
+      <td>
+         <strong>Type:</strong> string (enum)<br>
+         <strong>Example:</strong> integer<br>
+         <strong>Description:</strong> The type of the variable, it can be one of: text (default), integer, float, bool
+      </td>
+   </tr>
+   <tr>
+      <td>unit</td>
+      <td>
+         <strong>Type:</strong> string<br>
+         <strong>Example:</strong> Amps<br>
+         <strong>Description:</strong> The unit of the variable, this is mostly used for proper displaying of the variable on the software platform. 
+      </td>
+   </tr>
+   <tr>
+      <td>description</td>
+      <td>
+         <strong>Type:</strong> string<br>
+         <strong>Example:</strong> The instant voltage of the battery, a fully charged battery would be at 14.8V. <br>
+         <strong>Description:</strong> The description of the variable, providing additional context to be displayed in the software platform. 
+      </td>
+   </tr>
+   <tr>
+      <td>scale_factor</td>
+      <td>
+         <strong>Type:</strong> float<br>
+         <strong>Example:</strong> 0.25<br>
+         <strong>Description:</strong> A factor by which data of that variable will be multiplied by for processing and displaying. This is useful to save spac. For example if you only care about two significant digits, but your numbers are usually in the thousands, you can just put 12 in your variable to mean 1200 and have a `scale_factor` or 100. 
+      </td>
+   </tr>
+   <tr>
+      <td>aggregation_method</td>
+      <td>
+         <strong>Type:</strong> text (enum)<br>
+         <strong>Example:</strong> average<br>
+         <strong>Description:</strong> The function used to aggregate different data point of that variable through time (e.g. if you have points every minute but are showing a monthly view and want to show only one point per day). The available options are: average (default for numeric), latest (default for text), sum, min, max. 
+      </td>
+   </tr>
+</table>
+
+
+**Example:**
+
+```
+{
+   "name":"Power Used",
+   "type":"float",
+   "unit":"Wh",
+   "description":"The total power consumed by the appliances connected to the device.",
+   "scale_factor": 100,
+   "aggregation_method": "sum"
+}
+```
+
+
 ### Server Response Object
+
+**Description:** This is the object sent back by the server to the device, containing information about the activation status of the device and any settings change or other data relevant for the device. 
 
 <table>
    <tr>
