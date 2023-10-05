@@ -29,6 +29,11 @@ A Python library for the server side and Arduino library for the device side are
 
 ## Changelog
 
+## 2023-10-xx - v1.0.0-rc1
+- Added "Recursive Data Auth" as a memory efficient authentication option
+- Added clarification about data formatting for auth signature generation
+- Properly specified code block type for examples
+
 ### 2023-10-02 - v1.0.0-rc0
 - Improved the "Variable Type" object structure documentation
 - Added information about the aggregation of temporal data
