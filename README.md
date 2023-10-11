@@ -15,8 +15,18 @@ This repository contains all the information you need to integrate OpenPAYGO Met
   </a>
 </p>
 
-This open-source project was funded and developped by [Solaris Offgrid](https://www.solarisoffgrid.com/), the developers of PaygOps™ and is free to use by all. 
 
+## Credits
+This open-source project was fully funded and developped by [Solaris Offgrid](https://www.solarisoffgrid.com/), the developers of PaygOps™ and is free to use by all. 
+
+
+## Implementations
+
+### Python Implementation
+A [Python implementation](https://github.com/EnAccess/OpenPAYGO-python) is available, implementing OpenPAYGO Metrics as well as OpenPAYGO Token for use either on server side or on device side. 
+
+### Arduino Implementation
+An Arduino library for the device side is currently being worked on. More information will be posted here once a working version is available. If you would like to contribute or sponsor this project, or if you would like to be added to the registry of current user, open an issue in the issue tracker to let us know. 
 
 ## Getting Started
 
@@ -24,10 +34,13 @@ OpenPAYGO Metrics provide a standardized way for PAYGO devices to send usage met
 
 To get started implementing, check out [that document](https://github.com/openpaygo/metrics/blob/main/Specifications.md) that describes the detailed specification of the OpenPAYGO Metrics payload and API. 
 
-A Python library for the server side and Arduino library for the device side are currently being worked on. More information will be posted here once working versions are available. If you would like to contribute or sponsor this project, or if you would like to be added to the registry of current user, open an issue in the issue tracker to let us know. 
-
-
 ## Changelog
+
+## 2023-10-xx - v1.0.0-rc1
+- Added "Recursive Data Auth" as a memory efficient authentication option
+- Added clarification about data formatting for auth signature generation
+- Properly specified code block type for examples
+- Add link to OpenPAYGO Python library for handling metrics
 
 ### 2023-10-02 - v1.0.0-rc0
 - Improved the "Variable Type" object structure documentation
