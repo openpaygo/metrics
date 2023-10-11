@@ -36,7 +36,7 @@ To get started implementing, check out [that document](https://github.com/openpa
 
 ## Changelog
 
-## 2023-10-xx - v1.0.0-rc1
+### 2023-10-xx - v1.0.0-rc1
 - Added "Recursive Data Auth" as a memory efficient authentication option
 - Added clarification about data formatting for auth signature generation
 - Properly specified code block type for examples
