@@ -490,7 +490,7 @@ If you want to submit just a few variables that are higher in the order than var
       <td>
          <strong>Type:</strong> string (enum)<br>
          <strong>Example:</strong> integer<br>
-         <strong>Description:</strong> The type of the variable, it can be one of: text (default), integer, float, bool
+         <strong>Description:</strong> The type of the variable, it can be one of: text (default), integer, float, bool or gps. Note that for GPS the expected format is an array of [longitude (float), latitude (float)]. 
       </td>
    </tr>
    <tr>
